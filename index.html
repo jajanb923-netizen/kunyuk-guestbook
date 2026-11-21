@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kunyuk Guestbook — sign with your Agent ID</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; color: #1a1a1a; }
+  h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+  .sub { color: #555; margin-top: 0; }
+  .card { border: 1px solid #ddd; border-radius: 10px; padding: 1rem; margin: 1rem 0; }
+  button { background: #f0b90b; border: none; border-radius: 8px; padding: 0.6rem 1.1rem; font-size: 1rem; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  textarea { width: 100%; min-height: 4.5rem; font: inherit; padding: 0.5rem; box-sizing: border-box; }
+  .muted { color: #666; font-size: 0.9rem; }
+  .sig { border-top: 1px solid #eee; padding: 0.6rem 0; }
+  .sig .who { font-size: 0.85rem; color: #555; word-break: break-all; }
+  .sig .msg { white-space: pre-wrap; word-break: break-word; }
+  #status { font-size: 0.95rem; }
+  .warn { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 0.7rem; }
+</style>
+</head>
+<body>
+<h1>Kunyuk Guestbook</h1>
+<p class="sub">A guestbook on BNB Chain. Only holders of an Agent ID (<code>.ai</code> name) can leave a message — one signature per address.</p>
+
+<div class="card">
+  <p><strong>What this is.</strong> A smart contract on BNB Chain (chain ID 56) that stores short public messages from Agent ID holders. Holding is checked on-chain: the contract calls <code>balanceOf(address)</code> on the Agent ID contract (SPACE ID Agent ID, <code>0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F</code>) and only lets you sign if the result is greater than 0.</p>
+  <p><strong>What this is not.</strong> There is no token, no fee, no admin and no owner — nobody can pause the contract, change the rules, or withdraw anything (the contract holds no funds). It cannot look up anyone's wallet from their <code>.ai</code> name, and it never asks for your seed phrase, private key, or any pairing code.</p>
+  <p><strong>Signing costs gas.</strong> Each signature is a normal on-chain transaction from your own wallet. Your wallet will show you the details and ask you to confirm — nothing is sent without your confirmation. You pay only the BNB network gas fee (roughly 0.000013–0.00015 BNB depending on the gas price).</p>
+  <p class="muted">Contract: <a id="contractLink" href="#" target="_blank" rel="noopener"><code id="contractAddr"></code></a><br>
+  Source code (MIT): <a id="repoLink" href="#" target="_blank" rel="noopener">GitHub — kunyuk-guestbook</a><br>
+  Built for the Binance Agent ID Hackathon (18 Nov – 9 Dec 2026). This is an independent community project, not affiliated with or endorsed by Binance.</p>
+</div>
+
+<div class="card">
+  <p id="status">Not connected.</p>
+  <button id="connectBtn">Connect wallet</button>
+  <p class="muted">Connects only through your wallet's injected provider (<code>window.ethereum</code>) — the same way the Binance App's in-app browser connects. No QR codes, no WalletConnect, no third-party pairing, no account is created, and nothing about you is stored on any server. This page has no backend and no tracking.</p>
+</div>
+
+<div class="card">
+  <h2 style="font-size:1.15rem;margin-top:0">Leave your message</h2>
+  <textarea id="msg" maxlength="280" placeholder="Say hello (max 280 characters)…"></textarea>
+  <p class="muted"><span id="count">0</span>/280 characters</p>
+  <button id="signBtn" disabled>Sign the guestbook</button>
+  <p id="signStatus" class="muted"></p>
+  <div class="warn" id="alreadySigned" hidden>You have already signed this guestbook. One signature per address.</div>
+</div>
+
+<div class="card">
+  <h2 style="font-size:1.15rem;margin-top:0">Signatures (<span id="total">…</span>)</h2>
+  <div id="list"><p class="muted">Loading…</p></div>
+  <p><button id="refreshBtn">Refresh</button></p>
+</div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------------------
+// Config — set CONTRACT_ADDRESS after the contract is deployed on BNB Chain.
+// ---------------------------------------------------------------------------
+var CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // TODO: set after deploy
+var AGENT_ID_ADDRESS = "0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F";
+var RPC_URL = "https://bsc-rpc.publicnode.com";
+var CHAIN_ID_HEX = "0x38"; // BNB Chain mainnet, 56
+var REPO_URL = "https://github.com/jajanb923-netizen/kunyuk-guestbook";
+
+// Function selectors (verified against the compiled contract with `cast sig`).
+var SEL = {
+  sign: "79d6348d",
+  totalSignatures: "3015a521",
+  getSignature: "02a569e6",
+  hasSigned: "bf6a1413",
+  balanceOf: "70a08231"
+};
+
+// ---------------------------------------------------------------------------
+// Minimal ABI helpers (no dependencies; plain JSON-RPC via window.ethereum
+// for writes and a public BSC RPC for reads).
+// ---------------------------------------------------------------------------
+function hexPad32(hex) { // hex without 0x -> left-padded to 32 bytes
+  hex = hex.replace(/^0x/, "").toLowerCase();
+  return hex.padStart(64, "0");
+}
+function encodeUint256(n) { return hexPad32(BigInt(n).toString(16)); }
+function encodeAddress(a) { return hexPad32(a); }
+function encodeString(s) {
+  var bytes = new TextEncoder().encode(s);
+  var len = encodeUint256(bytes.length);
+  var data = Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+  data = data.padEnd(Math.ceil(data.length / 64) * 64, "0");
+  return "0000000000000000000000000000000000000000000000000000000000000020" + len + data;
+}
+function decodeUint256(hex, offset) {
+  return BigInt("0x" + hex.substr(offset, 64));
+}
+function decodeAddress(hex, offset) {
+  return "0x" + hex.substr(offset + 24, 40);
+}
+function decodeString(hex, offset) {
+  // offset points at the string head slot, which holds the offset to the tail
+  // in BYTES; hex positions are in characters, so multiply by 2.
+  var tail = Number(decodeUint256(hex, offset)) * 2;
+  var len = Number(decodeUint256(hex, tail));
+  var dataHex = hex.substr(tail + 64, len * 2);
+  var bytes = new Uint8Array(len);
+  for (var i = 0; i < len; i++) bytes[i] = parseInt(dataHex.substr(i * 2, 2), 16);
+  return new TextDecoder().decode(bytes);
+}
+function decodeGetSignature(hex) {
+  hex = hex.replace(/^0x/, "");
+  var signer = decodeAddress(hex, 0);
+  var message = decodeString(hex, 64);
+  var timestamp = decodeUint256(hex, 128);
+  return { signer: signer, message: message, timestamp: timestamp };
+}
+function rpcCall(to, data) {
+  return fetch(RPC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: to, data: data }, "latest"] })
+  }).then(function (r) { return r.json(); }).then(function (j) {
+    if (j.error) throw new Error(j.error.message || "RPC error");
+    return j.result;
+  });
+}
+function shortAddr(a) { return a.slice(0, 6) + "…" + a.slice(-4); }
+// All user text is inserted via textContent, never innerHTML — no HTML injection.
+
+// ---------------------------------------------------------------------------
+// Reads (public RPC — no wallet needed).
+// ---------------------------------------------------------------------------
+function readTotal() {
+  return rpcCall(CONTRACT_ADDRESS, "0x" + SEL.totalSignatures)
+    .then(function (hex) { return Number(decodeUint256(hex.replace(/^0x/, ""), 0)); });
+}
+function readSignature(i) {
+  return rpcCall(CONTRACT_ADDRESS, "0x" + SEL.getSignature + encodeUint256(i))
+    .then(function (hex) { return decodeGetSignature(hex); });
+}
+function readHasSigned(addr) {
+  return rpcCall(CONTRACT_ADDRESS, "0x" + SEL.hasSigned + encodeAddress(addr))
+    .then(function (hex) { return decodeUint256(hex.replace(/^0x/, ""), 0) > 0n; });
+}
+function readHoldsAgentId(addr) {
+  return rpcCall(AGENT_ID_ADDRESS, "0x" + SEL.balanceOf + encodeAddress(addr))
+    .then(function (hex) { return decodeUint256(hex.replace(/^0x/, ""), 0) > 0n; });
+}
+
+function renderList() {
+  var list = document.getElementById("list");
+  list.textContent = "";
+  var loading = document.createElement("p");
+  loading.className = "muted"; loading.textContent = "Loading…";
+  list.appendChild(loading);
+  readTotal().then(function (total) {
+    document.getElementById("total").textContent = total;
+    if (total === 0) {
+      list.textContent = "";
+      var p = document.createElement("p");
+      p.className = "muted"; p.textContent = "No signatures yet — be the first Agent ID holder to sign.";
+      list.appendChild(p);
+      return;
+    }
+    var show = Math.min(total, 50);
+    var jobs = [];
+    for (var i = total - 1; i >= total - show; i--) jobs.push(readSignature(i));
+    return Promise.all(jobs).then(function (sigs) {
+      list.textContent = "";
+      sigs.forEach(function (s) {
+        var div = document.createElement("div");
+        div.className = "sig";
+        var who = document.createElement("div");
+        who.className = "who";
+        who.textContent = shortAddr(s.signer) + " · " + new Date(Number(s.timestamp) * 1000).toLocaleString();
+        var msg = document.createElement("div");
+        msg.className = "msg";
+        msg.textContent = s.message;
+        div.appendChild(who); div.appendChild(msg);
+        list.appendChild(div);
+      });
+      if (total > show) {
+        var more = document.createElement("p");
+        more.className = "muted";
+        more.textContent = "Showing the latest " + show + " of " + total + " signatures.";
+        list.appendChild(more);
+      }
+    });
+  }).catch(function (e) {
+    list.textContent = "";
+    var p = document.createElement("p");
+    p.className = "muted"; p.textContent = "Could not load signatures: " + e.message;
+    list.appendChild(p);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Wallet (injected provider only).
+// ---------------------------------------------------------------------------
+var account = null;
+
+function setStatus(t) { document.getElementById("status").textContent = t; }
+
+function updateSignState() {
+  var btn = document.getElementById("signBtn");
+  var msg = document.getElementById("msg").value;
+  btn.disabled = !account || msg.trim().length === 0;
+}
+
+document.getElementById("msg").addEventListener("input", function () {
+  document.getElementById("count").textContent = document.getElementById("msg").value.length;
+  updateSignState();
+});
+
+document.getElementById("connectBtn").addEventListener("click", function () {
+  if (!window.ethereum) { setStatus("No injected wallet found. Open this page inside the Binance App's browser or another wallet's in-app browser."); return; }
+  window.ethereum.request({ method: "eth_requestAccounts" }).then(function (accounts) {
+    account = accounts[0];
+    return window.ethereum.request({ method: "eth_chainId" }).then(function (chainId) {
+      if (chainId !== CHAIN_ID_HEX) {
+        return window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_ID_HEX }] }).catch(function () {
+          throw new Error("Please switch your wallet to BNB Chain mainnet (chain ID 56).");
+        });
+      }
+    });
+  }).then(function () {
+    setStatus("Connected: " + account);
+    return Promise.all([readHoldsAgentId(account), readHasSigned(account)]);
+  }).then(function (res) {
+    var holds = res[0], signed = res[1];
+    if (!holds) setStatus("Connected: " + account + " — this address does not hold an Agent ID (.ai), so it cannot sign.");
+    else if (signed) {
+      setStatus("Connected: " + account + " — holds an Agent ID. Already signed.");
+      document.getElementById("alreadySigned").hidden = false;
+    } else {
+      setStatus("Connected: " + account + " — holds an Agent ID. You can sign below.");
+    }
+    updateSignState();
+  }).catch(function (e) { setStatus("Connection failed: " + e.message); });
+});
+
+document.getElementById("signBtn").addEventListener("click", function () {
+  if (!account) return;
+  var message = document.getElementById("msg").value;
+  var st = document.getElementById("signStatus");
+  st.textContent = "Checking…";
+  readHasSigned(account).then(function (signed) {
+    if (signed) {
+      document.getElementById("alreadySigned").hidden = false;
+      st.textContent = "You have already signed.";
+      return null;
+    }
+    st.textContent = "Waiting for your confirmation in the wallet…";
+    var data = "0x" + SEL.sign + encodeString(message);
+    return window.ethereum.request({
+      method: "eth_sendTransaction",
+      params: [{ from: account, to: CONTRACT_ADDRESS, data: data }]
+    });
+  }).then(function (txHash) {
+    if (!txHash) return;
+    st.textContent = "Transaction sent: " + txHash + " — waiting for confirmation…";
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      if (tries > 60) {
+        clearInterval(timer);
+        st.textContent = "Still not confirmed after 5 minutes — check the transaction hash on BscScan.";
+        return;
+      }
+      readHasSigned(account).then(function (signed) {
+        if (signed) {
+          clearInterval(timer);
+          st.textContent = "Signed! Your message is now on-chain.";
+          document.getElementById("alreadySigned").hidden = false;
+          renderList();
+        }
+      }).catch(function () { /* keep waiting */ });
+    }, 5000);
+  }).catch(function (e) { st.textContent = "Failed: " + (e.message || e); });
+});
+
+document.getElementById("refreshBtn").addEventListener("click", renderList);
+
+// ---------------------------------------------------------------------------
+// Init.
+// ---------------------------------------------------------------------------
+document.getElementById("contractAddr").textContent = CONTRACT_ADDRESS;
+document.getElementById("contractLink").href = "https://bscscan.com/address/" + CONTRACT_ADDRESS;
+document.getElementById("repoLink").href = REPO_URL;
+if (CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") {
+  document.getElementById("total").textContent = "contract not deployed yet";
+  document.getElementById("list").textContent = "";
+  var p = document.createElement("p");
+  p.className = "muted";
+  p.textContent = "The contract has not been deployed yet — the signature list will appear here once it is live on BNB Chain.";
+  document.getElementById("list").appendChild(p);
+} else {
+  renderList();
+}
+</script>
+</body>
+</html>
