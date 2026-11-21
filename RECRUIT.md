@@ -22,7 +22,7 @@ Rules for every message below — these are the hackathon's own red lines:
 >
 > If you hold an Agent ID, come sign it: https://jajanb923-netizen.github.io/kunyuk-guestbook/
 >
-> It's free except the network gas (about 0.00001–0.00015 BNB). No token, no rewards, no sign-up — just your wallet confirming one transaction in your own browser. Contract: TBD (link in the repo).
+> It's free except the network gas (about 0.00001–0.00015 BNB). No token, no rewards, no sign-up — just your wallet confirming one transaction in your own browser. Contract: 0x2328116640bdfb6772418332672820adb9774f7c (verified on BscScan).
 >
 > Thanks for helping a small builder from Indonesia 🙏
 
@@ -32,7 +32,7 @@ Rules for every message below — these are the hackathon's own red lines:
 >
 > Kalau kamu punya Agent ID, mampir dan tanda tangan di sini: https://jajanb923-netizen.github.io/kunyuk-guestbook/
 >
-> Gratis, cuma bayar gas jaringan (sekitar 0,00001–0,00015 BNB). Tidak ada token, tidak ada hadiah, tidak perlu daftar — cukup konfirmasi satu transaksi di wallet kamu sendiri. Alamat kontrak: TBD (ada di repo).
+> Gratis, cuma bayar gas jaringan (sekitar 0,00001–0,00015 BNB). Tidak ada token, tidak ada hadiah, tidak perlu daftar — cukup konfirmasi satu transaksi di wallet kamu sendiri. Alamat kontrak: 0x2328116640bdfb6772418332672820adb9774f7c (terverifikasi di BscScan).
 >
 > Makasih sudah bantu builder kecil dari Indonesia 🙏
 
