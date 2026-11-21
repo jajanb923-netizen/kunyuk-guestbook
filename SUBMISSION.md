@@ -27,7 +27,7 @@ public announcement period, to the reward address given at submission.
 | Project name | Kunyuk Guestbook |
 | Website | https://jajanb923-netizen.github.io/kunyuk-guestbook/ |
 | Contract address(es) | **0x2328116640bdfb6772418332672820adb9774f7c** (BNB Chain mainnet, chain 56) — deployed 2026-11-21 18:14 WIB, tx 0xac93d8d958d85bb00d82ead0b46d923d04f5f512784c7a59058df5e4d8f71fde, block 134877340, gas 507,507 at 0.05 gwei (~0.0000254 BNB) |
-| Contract source | Verified on BscScan (in progress via web form) + open-source in this repo (MIT) |
+| Contract source | **VERIFIED** — BscScan verify form (step 2) states "The Contract Source code for 0x2328116640bdfb6772418332672820adb9774f7c has already been verified" (confirmed twice, 18:29 WIB) + Sourcify independent check: exact_match (creation + runtime), verifiedAt 2026-11-21T11:16:05Z. Open-source in this repo (MIT) |
 | Agent ID usage description | The guestbook only lets Agent ID (.ai) holders sign. The contract calls balanceOf(address) on the SPACE ID Agent ID contract (0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F) and requires the result to be greater than 0 before accepting a message. One signature per address, max 280 characters, stored on-chain with signer + timestamp. Agent ID is the product's core gating mechanism, not an add-on. |
 | Reward receiving address | The user's payout wallet — confirm with Hendrik at submission time (do NOT invent it here). Use a USDC-receiving address on BNB Chain. |
 | Team | Solo — Hendrik (Indonesia), Agent ID kunyuk95.ai |
@@ -42,7 +42,7 @@ public announcement period, to the reward address given at submission.
 ## Checklist before submitting
 
 - [x] Contract deployed on BNB Chain mainnet
-- [ ] Contract source verified on BscScan
+- [x] Contract source verified on BscScan
 - [x] `CONTRACT_ADDRESS` set in `index.html` and page live on GitHub Pages
 - [x] "Submit Project Now" survey URL recorded above (fb26d2bd25e04329b1ba77c7b3811d23); exact field labels to confirm after Binance login
 - [ ] At least a few real Agent ID holders have signed (30 is the Innovation

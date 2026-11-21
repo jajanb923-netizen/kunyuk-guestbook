@@ -123,15 +123,15 @@ Until then the page shows "contract not deployed yet".
 - Deploy tx: 0xac93d8d958d85bb00d82ead0b46d923d04f5f512784c7a59058df5e4d8f71fde, block 134877340, status success, 2,101 bytes of code on-chain
 - Gas used: **507,507** at 0.05 gwei = **~0.0000254 BNB** (the 919,112 pre-deploy estimate included forge script overhead; actual creation gas is lower)
 - Deployer: throwaway 0xd39e914b81FBC1d4E1C348d37bC97db97498b7e3, funded 0.00008 BNB from the user's agentic wallet (funding tx 0x9ac8bfde06604b33d6badda5e70e031c927d5e6fc582daef49cad996f168aa27, block 134877220). Leftover ~0.0000546 BNB in the deployer.
+- **Recovery 18:20 WIB: 0.0000535 BNB sent back from the deployer to the agent wallet 0x9CF1... — verified on-chain by balances (agent wallet now 0.0000916581 BNB, deployer dust 0.00000007465 BNB) and deployer nonce 2. The first `cast send` attempt errored with a publicnode 403 AFTER broadcasting, so no tx hash was captured; do not re-send — the transfer is confirmed by the balances. Deployer is now effectively empty.**
 - Why a throwaway: `baw contract-call preview` refuses contract creation ("to is required for EVM contract-call"); the user approved the throwaway-deployer route in chat 18:08 WIB.
 - Wallet: re-logged in 18:05 WIB via QR pairing (code 1efb61); Developer Mode ON until 28 Nov 2026 18:07 WIB. `baw` 1.12.0 had to be reinstalled first (VM replacement wiped the global install; session survived).
-- BscScan verification: CLI blocked (foundry.toml has a dummy API key, no real key on file) — in progress via the BscScan web form with the flattened source (browser task, 18:16 WIB).
+- BscScan verification: **VERIFIED 2026-11-21 18:29 WIB** — the BscScan verify form (step 2) states the source "has already been verified" (confirmed twice); independently confirmed via Sourcify public API: exact_match (creation + runtime), verifiedAt 2026-11-21T11:16:05Z. The CLI route had been blocked (dummy API key) and the cloud browser kept hitting BscScan's Cloudflare check, so the green checkmark on the contract page itself was not visually seen — but the two confirmations above are authoritative. How it got verified at 11:16:05Z is not established (no submission was sent by us before then); do not invent an explanation.
 - `index.html` CONTRACT_ADDRESS set to the deployed address; GitHub Pages live at https://jajanb923-netizen.github.io/kunyuk-guestbook/ (enabled 18:03 WIB, About website set).
 - `broadcast/` and `cache/` now contain the REAL deploy output (run-latest.json) — do not delete; they are gitignored anyway.
 
 ## Still needed
 
-1. **BscScan verification** — in progress (browser task). Once green, tick the SUBMISSION.md box.
-2. **Recruit 30 Agent ID holders** (RECRUIT.md) — Innovation Award eligibility threshold; keep signing open until 9 Dec.
-3. **Submit** via the "Submit Project Now" survey (see SUBMISSION.md checklist). Reward address to be confirmed with Hendrik at submission time — not filled in here.
-4. Recover the deployer's leftover ~0.0000546 BNB to the agent wallet when convenient (one more `wallet send` from the deployer is not possible — the deployer key is local; use `cast send` with it, or leave it — it's the user's money either way).
+1. **Recruit 30 Agent ID holders** (RECRUIT.md) — Innovation Award eligibility threshold; keep signing open until 9 Dec.
+2. **Submit** via the "Submit Project Now" survey (see SUBMISSION.md checklist). Reward address to be confirmed with Hendrik at submission time — not filled in here. The form needs Hendrik's Binance login (no saved session in the cloud browser) — he signs in when ready.
+3. Recover the deployer's leftover ~0.0000546 BNB to the agent wallet when convenient (one more `wallet send` from the deployer is not possible — the deployer key is local; use `cast send` with it, or leave it — it's the user's money either way).
