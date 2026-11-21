@@ -1,7 +1,6 @@
 # Build notes — Kunyuk Guestbook (Agent ID Hackathon)
 
-Built 2026-11-21 (coordinator session dbbad140). **BUILD ONLY: nothing deployed,
-nothing spent, nothing submitted, no private key used or stored anywhere.**
+Built 2026-11-21 (coordinator session dbbad140). **DEPLOYED 2026-11-21 18:14 WIB — see Deploy record below. Nothing submitted yet; no private key stored anywhere except the throwaway deployer key in work-dir `.secrets/` (gitignored, never pushed).**
 
 ## Contract design
 
@@ -118,26 +117,21 @@ Until then the page shows "contract not deployed yet".
   "Submit Project Now", record the survey URL + exact fields in
   SUBMISSION.md. Do not guess the URL.
 
-## Still needed before deploy
+## Deploy record — LIVE 2026-11-21 18:14 WIB
 
-1. **Gas decision:** deploy at ≤0.13 gwei fits the ~0.00012 BNB balance;
-   a small top-up (~0.001 BNB) is recommended for margin — user's call.
-2. **Deploy approval:** deploy only after a fresh gas preview + the user's
-   explicit yes in chat (per On-Chain Safety Rails). The deployer key must
-   come from the user's own wallet flow (Binance App / `baw`); no key is
-   stored in this work dir.
-3. **GitHub repo** (parent creates via signed-in browser):
-   `jajanb923-netizen/kunyuk-guestbook`, public, MIT. Then publish
-   `index.html` via GitHub Pages and set `CONTRACT_ADDRESS` in it.
-   `lib/forge-std` is vendored in the work dir; if the push excludes it,
-   tests need `forge install foundry-rs/forge-std` first.
-4. **BscScan verification** of the deployed contract source (single file,
-   MIT, solc 0.8.24, optimizer on, 200 runs).
-5. **Recruit 30 Agent ID holders** (RECRUIT.md) — Innovation Award
-   eligibility threshold; keep signing open until 9 Dec.
-6. **Submit** via the "Submit Project Now" survey once its URL is captured
-   (see SUBMISSION.md checklist). Reward address to be confirmed with
-   Hendrik at submission time — not filled in here.
-7. The `broadcast/` and `cache/` folders in this work dir contain only the
-   dry-run simulation output (no real transaction). Safe to delete before
-   pushing; `out/` is build output.
+- Contract: **0x2328116640bdfb6772418332672820adb9774f7c** (BSC mainnet, chain 56)
+- Deploy tx: 0xac93d8d958d85bb00d82ead0b46d923d04f5f512784c7a59058df5e4d8f71fde, block 134877340, status success, 2,101 bytes of code on-chain
+- Gas used: **507,507** at 0.05 gwei = **~0.0000254 BNB** (the 919,112 pre-deploy estimate included forge script overhead; actual creation gas is lower)
+- Deployer: throwaway 0xd39e914b81FBC1d4E1C348d37bC97db97498b7e3, funded 0.00008 BNB from the user's agentic wallet (funding tx 0x9ac8bfde06604b33d6badda5e70e031c927d5e6fc582daef49cad996f168aa27, block 134877220). Leftover ~0.0000546 BNB in the deployer.
+- Why a throwaway: `baw contract-call preview` refuses contract creation ("to is required for EVM contract-call"); the user approved the throwaway-deployer route in chat 18:08 WIB.
+- Wallet: re-logged in 18:05 WIB via QR pairing (code 1efb61); Developer Mode ON until 28 Nov 2026 18:07 WIB. `baw` 1.12.0 had to be reinstalled first (VM replacement wiped the global install; session survived).
+- BscScan verification: CLI blocked (foundry.toml has a dummy API key, no real key on file) — in progress via the BscScan web form with the flattened source (browser task, 18:16 WIB).
+- `index.html` CONTRACT_ADDRESS set to the deployed address; GitHub Pages live at https://jajanb923-netizen.github.io/kunyuk-guestbook/ (enabled 18:03 WIB, About website set).
+- `broadcast/` and `cache/` now contain the REAL deploy output (run-latest.json) — do not delete; they are gitignored anyway.
+
+## Still needed
+
+1. **BscScan verification** — in progress (browser task). Once green, tick the SUBMISSION.md box.
+2. **Recruit 30 Agent ID holders** (RECRUIT.md) — Innovation Award eligibility threshold; keep signing open until 9 Dec.
+3. **Submit** via the "Submit Project Now" survey (see SUBMISSION.md checklist). Reward address to be confirmed with Hendrik at submission time — not filled in here.
+4. Recover the deployer's leftover ~0.0000546 BNB to the agent wallet when convenient (one more `wallet send` from the deployer is not possible — the deployer key is local; use `cast send` with it, or leave it — it's the user's money either way).
